@@ -15,7 +15,6 @@ import (
 func main() {
 	ctx := context.Background()
 	scanner := bufio.NewScanner(os.Stdin)
-
 	getUserMessage := func() (string, bool) {
 		fmt.Print("\u001b[94mYou\u001b[0m: ")
 		if !scanner.Scan() {
@@ -31,31 +30,57 @@ func main() {
 	parsedURL, _ := url.Parse(baseURL)
 	client := api.NewClient(parsedURL, http.DefaultClient)
 
-	var history []api.Message
-	for {
-		userInput, ok := getUserMessage()
-		if !ok {
-			break
-		}
+	AllTools = []ToolDefinition{
+		ReadFileDefinition,
+		ListFilesDefinition,
+		EditFileDefinition,
+	}
+	tools := ConvertToolsToOllamaFormat(AllTools)
 
-		history = append(history, api.Message{
-			Role:    "user",
-			Content: userInput,
-		})
-		resp, err := runOllamaChat(ctx, client, history)
+	readUserInput := true
+
+	var history []api.Message
+	fmt.Println(" Hello Lazy Coder, welcome to the code,")
+	fmt.Println(" Where solutions are copied, and understanding is mode.")
+
+	for {
+		if readUserInput {
+			userInput, ok := getUserMessage()
+			if !ok {
+				break
+			}
+
+			history = append(history, api.Message{
+				Role:    "user",
+				Content: userInput,
+			})
+		}
+		resp, err := runOllamaChat(ctx, client, history, tools)
 		if err != nil {
 			log.Fatal(err)
 		}
 		history = append(history, resp.Message)
-		fmt.Printf("\u001b[93mAsistant\u001b[0m: %s\n", resp.Message.Content)
+		if len(resp.Message.ToolCalls) > 0 {
+			for _, call := range resp.Message.ToolCalls {
+				fmt.Printf("\u001b[92mtool\u001b[0m: %s(%v)\n", call.Function.Name, call.Function.Arguments)
+				toolResult := ExecuteTool(call.Function.Name, call.Function.Arguments)
+				history = append(history, api.Message{Role: "tool", Content: toolResult})
+
+			}
+			readUserInput = false
+		} else {
+			fmt.Printf("\u001b[93mAsistant\u001b[0m: %s\n", resp.Message.Content)
+			readUserInput = true
+		}
 	}
 }
 
-func runOllamaChat(ctx context.Context, client *api.Client, messages []api.Message) (*api.ChatResponse, error) {
+func runOllamaChat(ctx context.Context, client *api.Client, messages []api.Message, tools api.Tools) (*api.ChatResponse, error) {
 	stream := false
 	req := &api.ChatRequest{
 		Model:    "qwen2.5:14b",
 		Messages: messages,
+		Tools:    tools,
 		Stream:   &stream,
 	}
 	var result *api.ChatResponse
@@ -65,4 +90,3 @@ func runOllamaChat(ctx context.Context, client *api.Client, messages []api.Messa
 	})
 	return result, err
 }
-
