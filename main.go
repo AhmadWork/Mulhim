@@ -33,8 +33,6 @@ func main() {
 	/* Defined tools in the tools.go */
 	AllTools = []ToolDefinition{
 		ReadFileDefinition,
-		ListFilesDefinition,
-		EditFileDefinition,
 	}
 
 	/* Convert AllTools to Ollama Api struct */
