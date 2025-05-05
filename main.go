@@ -30,20 +30,25 @@ func main() {
 	parsedURL, _ := url.Parse(baseURL)
 	client := api.NewClient(parsedURL, http.DefaultClient)
 
+	/* Defined tools in the tools.go */
 	AllTools = []ToolDefinition{
 		ReadFileDefinition,
 		ListFilesDefinition,
 		EditFileDefinition,
 	}
+
+	/* Convert AllTools to Ollama Api struct */
 	tools := ConvertToolsToOllamaFormat(AllTools)
 
+	// a bool variable to check if the user input needed
 	readUserInput := true
 
 	var history []api.Message
-	fmt.Println(" Hello Lazy Coder, welcome to the code,")
-	fmt.Println(" Where solutions are copied, and understanding is mode.")
+	fmt.Println(" Hello My Writer, welcome to Mulhim,")
+	fmt.Println(" Where Writer get inspired.")
 
 	for {
+		// 	Check if the request needs a user input
 		if readUserInput {
 			userInput, ok := getUserMessage()
 			if !ok {

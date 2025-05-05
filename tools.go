@@ -3,14 +3,17 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ollama/ollama/api"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/ollama/ollama/api"
 )
 
-// ToolDefinition represents a tool with its metadata and execution function
+/*
+This is the main struct that we will be using for creating every tool
+*/
 type ToolDefinition struct {
 	Name        string
 	Desc        string
@@ -18,9 +21,13 @@ type ToolDefinition struct {
 	Function    func(input json.RawMessage) (string, error)
 }
 
+/*The array that will be holding all the tools we build in */
 var AllTools = []ToolDefinition{}
 
-// ConvertToolsToOllamaFormat transforms tools into Ollama's API format
+/*
+A helper function that take array of ToolDefinition and convert them
+to Ollama Api structure.
+*/
 func ConvertToolsToOllamaFormat(tools []ToolDefinition) api.Tools {
 	type flexibleTool struct {
 		Type     string `json:"type"`
@@ -86,19 +93,13 @@ func ConvertToolsToOllamaFormat(tools []ToolDefinition) api.Tools {
 	return toolsList
 }
 
-// getRequiredFields extracts required field names from a properties map
-func getRequiredFields(props map[string]interface{}) []string {
-	var required []string
-	for k := range props {
-		required = append(required, k)
-	}
-	return required
-}
+/*
+A helper function that will use to Excute a tool if It exist
+and return It's output to the LLM.
+*/
 
-// ExecuteTool finds and executes a tool by name with given arguments
 func ExecuteTool(name string, args map[string]interface{}) string {
 	// Convert args to JSON input
-
 	input, err := json.Marshal(args)
 	if err != nil {
 		return fmt.Sprintf("error marshaling input: %v", err)
@@ -116,6 +117,7 @@ func ExecuteTool(name string, args map[string]interface{}) string {
 	return "tool not found"
 }
 
+/*Read file tool definition*/
 var ReadFileDefinition = ToolDefinition{
 	Name:        "read_file",
 	Desc:        "Reads a file from the local file system Only excite this if a file path is given",
@@ -123,6 +125,7 @@ var ReadFileDefinition = ToolDefinition{
 	Function:    readFile,
 }
 
+/*the function will be using to read file if the tool read_file is called*/
 func readFile(input json.RawMessage) (string, error) {
 	var data struct{ Path string }
 	if err := json.Unmarshal(input, &data); err != nil {
@@ -141,7 +144,7 @@ func readFile(input json.RawMessage) (string, error) {
 	return string(content), nil
 }
 
-// دالة قراءة الملفات
+/*Read files list (Basically ls) tool definition*/
 var ListFilesDefinition = ToolDefinition{
 	Name:        "list_files",
 	Desc:        "Lists files in a directory. Only use this when the user specifically asks for a list of files. If no path is given, assume the current directory.",
@@ -149,6 +152,7 @@ var ListFilesDefinition = ToolDefinition{
 	Function:    listFiles,
 }
 
+/*the function will be using to list files if the tool list_files is called*/
 func listFiles(input json.RawMessage) (string, error) {
 	var data struct{ Path string }
 	if err := json.Unmarshal(input, &data); err != nil {
@@ -200,7 +204,7 @@ func listFiles(input json.RawMessage) (string, error) {
 	return string(b), nil
 }
 
-// دالة تعديل الملف
+/*Edit file tool definition*/
 var EditFileDefinition = ToolDefinition{
 	Name: "edit_file",
 	Desc: "Replaces text in a file. Only use this when the user specifies a file path and provides old and new text. if the file does not exist and old_str is not provided just create a new file with the new_str",
@@ -212,6 +216,7 @@ var EditFileDefinition = ToolDefinition{
 	Function: editFile,
 }
 
+/*the function will be using to edit file if the tool edit_file is called*/
 func editFile(input json.RawMessage) (string, error) {
 	var data struct {
 		Path   string `json:"path"`
@@ -253,7 +258,7 @@ func editFile(input json.RawMessage) (string, error) {
 	return "OK", nil
 }
 
-// دالة مساعدة لكتابة ملف جديد في حال عدم وجوده
+/*A helper function that the editFile use if the file does not exist*/
 func createNewFile(filePath, content string) (string, error) {
 	dir := path.Dir(filePath)
 	if dir != "." {
